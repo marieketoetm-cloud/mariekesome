@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoMe Grid Preview</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #fafafa;
+      margin: 0;
+      padding: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .card img {
+      width: 100%;
+      display: block;
+    }
+    .card .caption {
+      padding: 8px;
+      font-size: 14px;
+      color: #333;
+    }
+    .card .date {
+      padding: 0 8px 8px;
+      font-size: 12px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <h1>Instagram Preview</h1>
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const FEED_ENDPOINT = "https://proud-frog-22e3.marieke-toet-m.workers.dev/"; // <- din Cloudflare worker URL
+
+    async function loadGrid() {
+      const res = await fetch(FEED_ENDPOINT);
+      const data = await res.json();
+      
+      const container = document.getElementById("grid");
+      container.innerHTML = "";
+
+      data.results.forEach(item => {
+        const props = item.properties;
+
+        // Tilpas til dine Notion felter
+        const imageUrl = props?.Media?.files?.[0]?.file?.url || props?.Media?.files?.[0]?.external?.url;
+        const caption = props?.Caption?.rich_text?.[0]?.plain_text || "";
+        const date = props?.Dato?.date?.start || "";
+
+        if (imageUrl) {
+          const card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML = `
+            <img src="${imageUrl}" alt="preview">
+            <div class="caption">${caption}</div>
+            <div class="date">${date}</div>
+          `;
+          container.appendChild(card);
+        }
+      });
+    }
+
+    loadGrid();
+  </script>
+</body>
+</html>
