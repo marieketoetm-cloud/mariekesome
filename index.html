@@ -1,79 +1,70 @@
 <!DOCTYPE html>
 <html lang="da">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SoMe Grid Preview</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #fafafa;
-      margin: 0;
-      padding: 20px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 10px;
-    }
-    .card {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      overflow: hidden;
-    }
-    .card img {
-      width: 100%;
-      display: block;
-    }
-    .card .caption {
-      padding: 8px;
-      font-size: 14px;
-      color: #333;
-    }
-    .card .date {
-      padding: 0 8px 8px;
-      font-size: 12px;
-      color: #777;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IG/TikTok Preview Grid</title>
+<style>
+:root{ --gap:8px; --radius:12px; --bg:#ffffff; --muted:#8a8a8a; --ring:#eaeaea; }
+html,body{margin:0;padding:0;background:var(--bg);font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+.toolbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--ring);padding:10px;display:flex;gap:8px;align-items:center;z-index:2}
+.btn{border:1px solid var(--ring);border-radius:10px;padding:8px 12px;background:#fff;cursor:pointer}
+.btn:active{transform:translateY(1px)}
+.select{border:1px solid var(--ring);border-radius:10px;padding:8px 10px;background:#fff}
+
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap);padding:var(--gap)}
+@media (max-width:860px){ .grid{grid-template-columns:repeat(2,1fr);} }
+@media (max-width:520px){ .grid{grid-template-columns:repeat(1,1fr);} }
+
+
+.card{position:relative;aspect-ratio:1/1;border-radius:var(--radius);overflow:hidden;background:#f7f7f7;border:1px solid var(--ring)}
+.thumb{width:100%;height:100%;object-fit:cover;display:block}
+.badge{position:absolute;top:6px;left:6px;background:#000;color:#fff;font-size:12px;padding:4px 6px;border-radius:6px;opacity:.8}
+.date{position:absolute;bottom:6px;left:6px;background:rgba(255,255,255,.9);border-radius:6px;padding:2px 6px;font-size:12px}
+.status{position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,.75);color:#fff;border-radius:6px;padding:2px 6px;font-size:12px}
+
+
+.empty{padding:24px;text-align:center;color:var(--muted)}
+</style>
 </head>
 <body>
-  <h1>Instagram Preview</h1>
-  <div class="grid" id="grid"></div>
+<div class="toolbar">
+<button id="refresh" class="btn">Opdater</button>
+<select id="platform" class="select">
+<option value="">Alle platforme</option>
+<option>Instagram</option>
+<option>TikTok</option>
+</select>
+<span id="count" style="color:#666"></span>
+</div>
 
-  <script>
-    const FEED_ENDPOINT = "https://proud-frog-22e3.marieke-toet-m.workers.dev/"; // <- din Cloudflare worker URL
 
-    async function loadGrid() {
-      const res = await fetch(FEED_ENDPOINT);
-      const data = await res.json();
-      
-      const container = document.getElementById("grid");
-      container.innerHTML = "";
+<main id="grid" class="grid" aria-live="polite"></main>
+<div id="empty" class="empty" style="display:none">Ingen opslag fundet.</div>
 
-      data.results.forEach(item => {
-        const props = item.properties;
 
-        // Tilpas til dine Notion felter
-        const imageUrl = props?.Media?.files?.[0]?.file?.url || props?.Media?.files?.[0]?.external?.url;
-        const caption = props?.Caption?.rich_text?.[0]?.plain_text || "";
-        const date = props?.Dato?.date?.start || "";
+<script>
+const FEED_ENDPOINT = "https://<din-worker>.workers.dev/feed"; // ← SKIFT DENNE
 
-        if (imageUrl) {
-          const card = document.createElement("div");
-          card.className = "card";
-          card.innerHTML = `
-            <img src="${imageUrl}" alt="preview">
-            <div class="caption">${caption}</div>
-            <div class="date">${date}</div>
-          `;
-          container.appendChild(card);
-        }
-      });
-    }
 
-    loadGrid();
-  </script>
-</body>
+async function loadFeed() {
+const grid = document.getElementById('grid');
+const empty = document.getElementById('empty');
+const platform = document.getElementById('platform').value;
+const count = document.getElementById('count');
+
+
+grid.innerHTML = '';
+empty.style.display = 'none';
+
+
+const url = new URL(FEED_ENDPOINT);
+url.searchParams.set('limit', '60');
+if (platform) url.searchParams.set('platform', platform);
+
+
+const res = await fetch(url.toString(), { cache: 'no-store' });
+const data = await res.json();
+const items = (data.items || []).sort((a,b)=>new Date(a.date) - new Date(b.date)); // vis ældst→nyest som IG
 </html>
