@@ -1,62 +1,183 @@
 <!DOCTYPE html>
 <html lang="da">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Notion Feed Grid</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SoMe Preview Grid</title>
 <style>
-body { font-family:sans-serif; margin:0; padding:20px; background:#f9f9f9; }
-.grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-.card { background:#fff; border:1px solid #ccc; border-radius:10px; overflow:hidden; text-align:center; padding:5px; }
-.thumb { width:100%; display:block; border-radius:6px; }
-@media (max-width:860px){ .grid{grid-template-columns:repeat(2,1fr);} }
-@media (max-width:520px){ .grid{grid-template-columns:repeat(1,1fr);} }
+  body {
+    margin: 0;
+    font-family: sans-serif;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .toolbar {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    max-width: 935px;
+    z-index: 2;
+  }
+
+  .btn, .select {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .btn:active {
+    transform: translateY(1px);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    max-width: 935px;
+    width: 100%;
+  }
+
+  .card {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+
+  .card:hover img {
+    transform: scale(1.05);
+  }
+
+  .caption {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    font-size: 14px;
+    text-align: center;
+    opacity: 0;
+    padding: 10px;
+    transition: opacity 0.3s ease;
+  }
+
+  .card:hover .caption {
+    opacity: 1;
+  }
+
+  .empty {
+    padding: 24px;
+    text-align: center;
+    color: #888;
+  }
 </style>
 </head>
 <body>
-<h1>Notion Feed</h1>
-<main id="grid"></main>
-<div id="empty" style="display:none; margin-top:20px;">Ingen opslag fundet.</div>
+
+<div class="toolbar">
+  <button id="refresh" class="btn">🔄 Opdater</button>
+  <select id="platform" class="select">
+    <option value="">Alle platforme</option>
+    <option>Instagram</option>
+    <option>TikTok</option>
+  </select>
+  <span id="count" style="color:#666"></span>
+</div>
+
+<main id="grid" class="grid" aria-live="polite"></main>
+<div id="empty" class="empty" style="display:none">Ingen opslag fundet.</div>
 
 <script>
-const FEED_ENDPOINT = "https://proud-frog-22e3.marieke-toet-m.workers.dev/"; // SKIFT TIL DIN WORKER
+const FEED_ENDPOINT = "https://proud-frog-22e3.marieke-toet-m.workers.dev/";
 
 async function loadFeed() {
   const grid = document.getElementById('grid');
   const empty = document.getElementById('empty');
+  const platform = document.getElementById('platform').value;
+  const count = document.getElementById('count');
+
   grid.innerHTML = '';
   empty.style.display = 'none';
+  count.textContent = '';
 
   try {
-    const res = await fetch(FEED_ENDPOINT);
-    if (!res.ok) throw new Error(`HTTP fejl: ${res.status}`);
+    const res = await fetch(FEED_ENDPOINT, { cache: 'no-store' });
+    if (!res.ok) throw new Error("Kunne ikke hente data");
+
     const data = await res.json();
 
-    if (!data.results || data.results.length === 0) {
+    let items = (data.results || []).map(page => {
+      const props = page.properties;
+
+      return {
+        images: props.Thumpnail?.files?.map(f => f.external?.url).filter(Boolean) || [],
+        caption: props.Caption?.rich_text?.[0]?.plain_text || "",
+        platform: props.Platform?.select?.name || "",
+        url: props.URL?.url || page.url || "#",
+        status: props.Status?.status?.name || "",
+        name: props.Navn?.title?.[0]?.plain_text || "",
+        date: props.Dato?.date?.start || page.created_time
+      };
+    });
+
+    // Filtrering på platform
+    if (platform) items = items.filter(i => i.platform === platform);
+
+    // Sortering efter dato
+    items.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+    if (items.length === 0) {
       empty.style.display = 'block';
       return;
     }
 
-    data.results.forEach(item => {
-      const date = item.properties?.Dato?.date?.start || "";
-      const platform = item.properties?.Platform?.select?.name || "Ukendt";
-      const thumb = item.properties?.Billede?.files?.[0]?.file?.url || "https://via.placeholder.com/150";
-
+    items.forEach(item => {
       const card = document.createElement('div');
       card.className = 'card';
-      card.innerHTML = `<img src="${thumb}" class="thumb"><p>${platform}</p><p>${date}</p>`;
+      const imageUrl = item.images[0] || 'https://via.placeholder.com/400';
+      card.innerHTML = `
+        <a href="${item.url}" target="_blank" style="display:block; width:100%; height:100%;">
+          <img src="${imageUrl}" alt="${item.caption}">
+          ${item.caption ? `<div class="caption">${item.caption}</div>` : ''}
+        </a>
+      `;
       grid.appendChild(card);
     });
 
-  } catch(err) {
-    console.error("Fejl ved hentning af feed:", err);
-    empty.textContent = "Kunne ikke hente data.";
+    count.textContent = `${items.length} opslag`;
+  } catch (err) {
+    console.error(err);
     empty.style.display = 'block';
+    empty.textContent = "Fejl: kunne ikke hente opslag.";
   }
 }
 
+document.getElementById('refresh').addEventListener('click', loadFeed);
+document.getElementById('platform').addEventListener('change', loadFeed);
+
 loadFeed();
 </script>
+
 </body>
 </html>
-
