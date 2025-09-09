@@ -55,11 +55,16 @@
     cursor: pointer;
   }
 
-  .card img {
+  .card img, 
+  .card iframe {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
+    border: 0;
+  }
+
+  .card img {
     transition: transform 0.3s ease;
   }
 
@@ -131,13 +136,15 @@ async function loadFeed() {
       const props = page.properties;
 
       return {
-        images: props.Thumpnail?.files?.map(f => f.external?.url).filter(Boolean) || [],
         caption: props.Caption?.rich_text?.[0]?.plain_text || "",
         platform: props.Platform?.select?.name || "",
         url: props.URL?.url || page.url || "#",
         status: props.Status?.status?.name || "",
         name: props.Navn?.title?.[0]?.plain_text || "",
-        date: props.Dato?.date?.start || page.created_time
+        date: props.Dato?.date?.start || page.created_time,
+        imageSource: props["Image source"]?.select?.name || "",
+        link: props["Link"]?.url || "",
+        canvaLink: props["Canva link"]?.url || ""
       };
     });
 
@@ -155,13 +162,26 @@ async function loadFeed() {
     items.forEach(item => {
       const card = document.createElement('div');
       card.className = 'card';
-      const imageUrl = item.images[0] || 'https://via.placeholder.com/400';
+
+      let imageHtml = '';
+
+      if (item.imageSource === "Canva" && item.canvaLink) {
+        imageHtml = `
+          <iframe src="${item.canvaLink}" allowfullscreen></iframe>
+        `;
+      } else if (item.link) {
+        imageHtml = `<img src="${item.link}" alt="${item.caption}">`;
+      } else {
+        imageHtml = `<img src="https://via.placeholder.com/400" alt="mangler billede">`;
+      }
+
       card.innerHTML = `
-        <a href="${item.url}" target="_blank" style="display:block; width:100%; height:100%;">
-          <img src="${imageUrl}" alt="${item.caption}">
+        <a href="${item.url}" target="_blank" style="display:block;width:100%;height:100%;">
+          ${imageHtml}
           ${item.caption ? `<div class="caption">${item.caption}</div>` : ''}
         </a>
       `;
+
       grid.appendChild(card);
     });
 
