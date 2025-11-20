@@ -1,203 +1,1091 @@
-<!DOCTYPE html>
-<html lang="da">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>SoMe Preview Grid</title>
-<style>
-  body {
-    margin: 0;
-    font-family: sans-serif;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instagram Profile Widget</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #fafafa;
+            color: #262626;
+            height: 100%;
+            overflow: hidden;
+        }
 
-  .toolbar {
-    position: sticky;
-    top: 0;
-    background: #fff;
-    border-bottom: 1px solid #ddd;
-    padding: 10px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    width: 100%;
-    max-width: 935px;
-    z-index: 2;
-  }
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
 
-  .btn, .select {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 8px 12px;
-    background: #fff;
-    cursor: pointer;
-  }
+        .profile-container {
+            max-width: 935px;
+            margin: 0 auto;
+            background: white;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
 
-  .btn:active {
-    transform: translateY(1px);
-  }
+        .profile-header {
+            padding: 30px 20px;
+            border-bottom: 1px solid #dbdbdb;
+            background: white;
+        }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
-    max-width: 935px;
-    width: 100%;
-  }
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            max-width: 600px;
+        }
 
-  .card {
-    position: relative;
-    aspect-ratio: 1 / 1;
-    overflow: hidden;
-    cursor: pointer;
-  }
+        @media (max-width: 768px) {
+            .profile-info {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+        }
 
-  .card img, 
-  .card iframe {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-    border: 0;
-  }
+        .profile-avatar {
+            flex-shrink: 0;
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px;
+        }
 
-  .card img {
-    transition: transform 0.3s ease;
-  }
+        @media (max-width: 768px) {
+            .profile-avatar {
+                width: 100px;
+                height: 100px;
+            }
+        }
 
-  .card:hover img {
-    transform: scale(1.05);
-  }
+        .profile-avatar-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
 
-  .caption {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.5);
-    color: white;
-    font-size: 14px;
-    text-align: center;
-    opacity: 0;
-    padding: 10px;
-    transition: opacity 0.3s ease;
-  }
+        .profile-details {
+            flex: 1;
+        }
 
-  .card:hover .caption {
-    opacity: 1;
-  }
+        .profile-username {
+            font-size: 28px;
+            font-weight: 300;
+            margin: 0 0 20px 0;
+            color: #262626;
+        }
 
-  .empty {
-    padding: 24px;
-    text-align: center;
-    color: #888;
-  }
-</style>
-</head>
-<body>
+        @media (max-width: 768px) {
+            .profile-username {
+                font-size: 22px;
+            }
+        }
 
-<div class="toolbar">
-  <button id="refresh" class="btn">🔄 Opdater</button>
-  <select id="platform" class="select">
-    <option value="">Alle platforme</option>
-    <option>Instagram</option>
-    <option>TikTok</option>
-  </select>
-  <span id="count" style="color:#666"></span>
-</div>
+        .profile-stats {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 20px;
+        }
 
-<main id="grid" class="grid" aria-live="polite"></main>
-<div id="empty" class="empty" style="display:none">Ingen opslag fundet.</div>
+        @media (max-width: 768px) {
+            .profile-stats {
+                justify-content: center;
+                gap: 20px;
+            }
+        }
 
-<script>
-const FEED_ENDPOINT = "https://proud-frog-22e3.marieke-toet-m.workers.dev/";
+        .stat-item {
+            display: flex;
+            gap: 5px;
+            font-size: 16px;
+        }
 
-async function loadFeed() {
-  const grid = document.getElementById('grid');
-  const empty = document.getElementById('empty');
-  const platform = document.getElementById('platform').value;
-  const count = document.getElementById('count');
+        .stat-number {
+            font-weight: 600;
+            color: #262626;
+        }
 
-  grid.innerHTML = '';
-  empty.style.display = 'none';
-  count.textContent = '';
+        .stat-label {
+            color: #262626;
+        }
 
-  try {
-    const res = await fetch(FEED_ENDPOINT, { cache: 'no-store' });
-    if (!res.ok) throw new Error("Kunne ikke hente data");
+        .profile-bio {
+            font-size: 16px;
+            line-height: 1.5;
+            color: #262626;
+            white-space: pre-wrap;
+        }
 
-    const data = await res.json();
+        .posts-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
 
-    let items = (data.results || []).map(page => {
-      const props = page.properties;
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3px;
+        }
 
-      return {
-        caption: props.Caption?.rich_text?.[0]?.plain_text || "",
-        platform: props.Platform?.select?.name || "",
-        url: props.URL?.url || page.url || "#",
-        status: props.Status?.status?.name || "",
-        name: props.Navn?.title?.[0]?.plain_text || "",
-        date: props.Dato?.date?.start || page.created_time,
-        imageSource: props["Image source"]?.select?.name || "",
-        link: props["Link"]?.url || "",
-        canvaLink: props["Canva link"]?.url || ""
-      };
-    });
+        @media (max-width: 768px) {
+            .posts-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
 
-    // Filtrering på platform
-    if (platform) items = items.filter(i => i.platform === platform);
+        .post-item {
+            position: relative;
+            width: 100%;
+            padding-bottom: 125%;
+            background: #f0f0f0;
+            cursor: pointer;
+            overflow: hidden;
+        }
 
-    // Sortering efter dato
-    items.sort((a,b) => new Date(b.date) - new Date(a.date));
+        .post-thumbnail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
 
-    if (items.length === 0) {
-      empty.style.display = 'block';
-      return;
-    }
+        .post-item:hover .post-thumbnail {
+            transform: scale(1.08);
+        }
 
-    items.forEach(item => {
-      const card = document.createElement('div');
-      card.className = 'card';
+        .post-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            padding: 15px;
+            text-align: center;
+        }
 
-      let imageHtml = '';
+        .post-item:hover .post-overlay {
+            opacity: 1;
+        }
 
-      if (item.imageSource === "Canva" && item.canvaLink) {
-        imageHtml = `
-          <iframe src="${item.canvaLink}" allowfullscreen></iframe>
-        `;
-      } else if (item.link) {
-        imageHtml = `<img src="${item.link}" alt="${item.caption}">`;
-      } else {
-        imageHtml = `<img src="https://via.placeholder.com/400" alt="mangler billede">`;
-      }
+        .overlay-date {
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-      card.innerHTML = `
-        <a href="${item.url}" target="_blank" style="display:block;width:100%;height:100%;">
-          ${imageHtml}
-          ${item.caption ? `<div class="caption">${item.caption}</div>` : ''}
-        </a>
-      `;
+        .overlay-category {
+            color: white;
+            font-size: 12px;
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
 
-      grid.appendChild(card);
-    });
+        .post-type-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            backdrop-filter: blur(5px);
+            z-index: 1;
+        }
 
-    count.textContent = `${items.length} opslag`;
-  } catch (err) {
-    console.error(err);
-    empty.style.display = 'block';
-    empty.textContent = "Fejl: kunne ikke hente opslag.";
-  }
-}
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
 
-document.getElementById('refresh').addEventListener('click', loadFeed);
-document.getElementById('platform').addEventListener('change', loadFeed);
+        .modal.active {
+            display: flex;
+        }
 
-loadFeed();
-</script>
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 1200px;
+            height: 90%;
+            max-height: 800px;
+            display: flex;
+            flex-direction: row;
+            position: relative;
+            margin: 20px;
+        }
 
-</body>
+        @media (max-width: 968px) {
+            .modal-content {
+                flex-direction: column;
+                height: 95%;
+                margin: 10px;
+            }
+        }
+
+        .modal-media-section {
+            flex: 1.4;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .media-carousel {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .media-item {
+            display: none;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .media-item.active {
+            display: flex;
+        }
+
+        .media-image {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        .media-video {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+        }
+
+        .carousel-button {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: #262626;
+            transition: all 0.2s ease;
+            z-index: 10;
+            opacity: 0.9;
+        }
+
+        .carousel-button:hover {
+            background: white;
+            opacity: 1;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .carousel-button.prev {
+            left: 15px;
+        }
+
+        .carousel-button.next {
+            right: 15px;
+        }
+
+        .carousel-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .carousel-dots {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            z-index: 10;
+        }
+
+        .carousel-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .carousel-dot.active {
+            background: white;
+            width: 8px;
+            height: 8px;
+        }
+
+        .modal-info-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 968px) {
+            .modal-info-section {
+                max-height: 40%;
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #efefef;
+        }
+
+        .modal-category-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #0095f6;
+            color: white;
+            border-radius: 24px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+        }
+
+        .modal-date {
+            color: #8e8e8e;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .modal-caption-section {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .modal-caption {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #262626;
+            white-space: pre-wrap;
+        }
+
+        .modal-nav-section {
+            padding: 15px 20px;
+            border-top: 1px solid #efefef;
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-nav-button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #dbdbdb;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #262626;
+            transition: all 0.2s ease;
+        }
+
+        .modal-nav-button:hover:not(:disabled) {
+            background: #fafafa;
+            border-color: #8e8e8e;
+        }
+
+        .modal-nav-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 28px;
+            color: #262626;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            transition: all 0.2s ease;
+            line-height: 1;
+        }
+
+        .close-button:hover {
+            background: white;
+            transform: scale(1.1);
+        }
+
+        .loading-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8e8e8e;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #0095f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #8e8e8e;
+        }
+
+        .error-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #ed4956;
+        }
+
+        .error-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .error-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .error-message {
+            font-size: 14px;
+            color: #8e8e8e;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8e8e8e;
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .empty-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #262626;
+        }
+
+        .empty-text {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="profile-container">
+   <header class="profile-header">
+    <div class="profile-info">
+     <div class="profile-avatar">
+      <div class="profile-avatar-inner" id="profileAvatar">
+       📸
+      </div>
+     </div>
+     <div class="profile-details">
+      <h1 class="profile-username" id="profileUsername">@username</h1>
+      <div class="profile-stats">
+       <div class="stat-item"><span class="stat-number" id="postCount">0</span> <span class="stat-label">posts</span>
+       </div>
+       <div class="stat-item"><span class="stat-number">2.4K</span> <span class="stat-label">followers</span>
+       </div>
+       <div class="stat-item"><span class="stat-number">1.2K</span> <span class="stat-label">following</span>
+       </div>
+      </div>
+      <div class="profile-bio" id="profileBio">
+       Your bio here
+      </div>
+     </div>
+    </div>
+   </header>
+   <div class="posts-container">
+    <div class="loading-state" id="loadingState">
+     <div class="loading-spinner"></div>
+     <div class="loading-text">
+      Loading posts from Notion...
+     </div>
+    </div>
+    <div class="posts-grid" id="postsGrid" style="display: none;"></div>
+    <div class="error-state" id="errorState" style="display: none;">
+     <div class="error-icon">
+      ⚠️
+     </div>
+     <div class="error-title">
+      Failed to Load Posts
+     </div>
+     <div class="error-message">
+      Could not connect to the API. Please check your endpoint.
+     </div>
+    </div>
+    <div class="empty-state" id="emptyState" style="display: none;">
+     <div class="empty-icon">
+      📷
+     </div>
+     <div class="empty-title">
+      No Posts Yet
+     </div>
+     <div class="empty-text">
+      Posts will appear here once added to your Notion database.
+     </div>
+    </div>
+   </div>
+  </div>
+  <div class="modal" id="postModal"><button class="close-button" onclick="closeModal()" aria-label="Close">×</button>
+   <div class="modal-content">
+    <div class="modal-media-section">
+     <div class="media-carousel" id="mediaCarousel"><!-- Media items will be inserted here -->
+     </div><button class="carousel-button prev" id="prevMediaBtn" onclick="previousMedia()">‹</button> <button class="carousel-button next" id="nextMediaBtn" onclick="nextMedia()">›</button>
+     <div class="carousel-dots" id="carouselDots"></div>
+    </div>
+    <div class="modal-info-section">
+     <div class="modal-header">
+      <div class="modal-category-badge" id="modalCategory">
+       Category
+      </div>
+      <div class="modal-date" id="modalDate">
+       Date
+      </div>
+     </div>
+     <div class="modal-caption-section">
+      <div class="modal-caption" id="modalCaption">
+       Caption
+      </div>
+     </div>
+     <div class="modal-nav-section"><button class="modal-nav-button" id="prevPostBtn" onclick="previousPost()"> ← Previous </button> <button class="modal-nav-button" id="nextPostBtn" onclick="nextPost()"> Next → </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+        // Field mapping - easy to update if Notion field names change
+        const FIELD_MAP = {
+            thumbnail: 'thumbnail',
+            media: 'media',
+            caption: 'caption',
+            date: 'date',
+            category: 'category',
+            username: 'username',
+            bio: 'bio'
+        };
+
+        // State
+        let postsData = [];
+        let currentPostIndex = 0;
+        let currentMediaIndex = 0;
+        let profileData = {};
+
+        // Configuration
+        const defaultConfig = {
+            api_endpoint: 'https://proud-frog-22e3.marieke-toet-m.workers.dev/',
+            profile_username: '@username',
+            profile_bio: 'Your bio here'
+        };
+
+        // Generate colorful placeholder SVG
+        function generatePlaceholderSVG(index, category) {
+            const colors = [
+                ['#667eea', '#764ba2'], // Purple gradient
+                ['#f093fb', '#f5576c'], // Pink gradient
+                ['#4facfe', '#00f2fe'], // Blue gradient
+                ['#43e97b', '#38f9d7'], // Green gradient
+                ['#fa709a', '#fee140'], // Orange gradient
+                ['#30cfd0', '#330867'], // Teal gradient
+                ['#a8edea', '#fed6e3'], // Pastel gradient
+                ['#ff9a9e', '#fecfef'], // Rose gradient
+                ['#ffecd2', '#fcb69f']  // Peach gradient
+            ];
+            
+            const colorPair = colors[index % colors.length];
+            const emoji = ['📸', '🎨', '✨', '🌟', '💫', '🎭', '🎪', '🎬', '📷'][index % 9];
+            
+            return `data:image/svg+xml,${encodeURIComponent(`<svg width="400" height="500" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="grad${index}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:${colorPair[0]};stop-opacity:1"/><stop offset="100%" style="stop-color:${colorPair[1]};stop-opacity:1"/></linearGradient></defs><rect width="400" height="500" fill="url(#grad${index})"/><text x="200" y="250" font-size="80" text-anchor="middle" dominant-baseline="middle">${emoji}</text><text x="200" y="350" font-size="24" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-weight="600">${category}</text></svg>`)}`;
+        }
+
+        // Fetch data from Cloudflare Worker
+        async function fetchData(apiEndpoint) {
+            try {
+                showLoading();
+                
+                const response = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Fetched data:', data);
+                return data;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                showError();
+                return null;
+            }
+        }
+
+        // Transform API data to internal format
+        function transformData(apiData) {
+            if (!apiData) return { posts: [], profile: {} };
+
+            console.log('Transforming data:', apiData);
+
+            // Handle if data has a results or posts property
+            let postsArray = apiData;
+            if (apiData.results) postsArray = apiData.results;
+            if (apiData.posts) postsArray = apiData.posts;
+            if (!Array.isArray(postsArray)) postsArray = [apiData];
+
+            // Extract profile info from first item or use config defaults
+            const firstItem = postsArray[0] || {};
+            const profile = {
+                username: firstItem[FIELD_MAP.username] || defaultConfig.profile_username,
+                bio: firstItem[FIELD_MAP.bio] || defaultConfig.profile_bio
+            };
+
+            // Transform posts
+            return {
+                profile,
+                posts: postsArray.filter(item => item && typeof item === 'object').map((item, index) => {
+                    // Get media array
+                    let mediaArray = item[FIELD_MAP.media];
+                    if (!Array.isArray(mediaArray)) {
+                        mediaArray = mediaArray ? [mediaArray] : [];
+                    }
+                    if (mediaArray.length === 0 && item[FIELD_MAP.thumbnail]) {
+                        mediaArray = [item[FIELD_MAP.thumbnail]];
+                    }
+
+                    return {
+                        id: index,
+                        thumbnail: item[FIELD_MAP.thumbnail] || mediaArray[0] || '',
+                        media: mediaArray,
+                        caption: item[FIELD_MAP.caption] || 'No caption',
+                        date: item[FIELD_MAP.date] || new Date().toISOString(),
+                        category: item[FIELD_MAP.category] || 'Uncategorized',
+                        type: determineMediaType(mediaArray)
+                    };
+                })
+            };
+        }
+
+        // Determine media type
+        function determineMediaType(media) {
+            if (!media || !Array.isArray(media)) return 'image';
+            
+            const firstItem = media[0] || '';
+            const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv'];
+            const isVideo = videoExtensions.some(ext => firstItem.toLowerCase().includes(ext));
+            
+            return media.length > 1 ? 'carousel' : (isVideo ? 'video' : 'image');
+        }
+
+        // Check if URL is a video
+        function isVideoUrl(url) {
+            const videoExtensions = ['.mp4', '.mov', '.avi', '.webm', '.mkv'];
+            return videoExtensions.some(ext => url.toLowerCase().includes(ext));
+        }
+
+        // Show loading state
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'block';
+            document.getElementById('postsGrid').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+        }
+
+        // Show error state
+        function showError() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('postsGrid').style.display = 'none';
+            document.getElementById('errorState').style.display = 'block';
+            document.getElementById('emptyState').style.display = 'none';
+        }
+
+        // Show empty state
+        function showEmpty() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('postsGrid').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+        }
+
+        // Show grid
+        function showGrid() {
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('postsGrid').style.display = 'grid';
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+        }
+
+        // Render profile header
+        function renderProfile() {
+            const username = profileData.username || defaultConfig.profile_username;
+            const bio = profileData.bio || defaultConfig.profile_bio;
+
+            document.getElementById('profileUsername').textContent = username;
+            document.getElementById('profileBio').textContent = bio;
+            document.getElementById('postCount').textContent = postsData.length;
+
+            // Set avatar to first letter or emoji
+            const avatarText = username.replace('@', '').charAt(0).toUpperCase() || '📸';
+            document.getElementById('profileAvatar').textContent = avatarText;
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'No date';
+            
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { 
+                    year: 'numeric',
+                    month: 'short', 
+                    day: 'numeric'
+                });
+            } catch {
+                return dateString;
+            }
+        }
+
+        // Render posts grid
+        function renderGrid() {
+            const grid = document.getElementById('postsGrid');
+
+            if (postsData.length === 0) {
+                showEmpty();
+                return;
+            }
+
+            showGrid();
+
+            grid.innerHTML = postsData.map((post, index) => {
+                const hasThumbnail = post.thumbnail && post.thumbnail.trim() !== '';
+                const placeholderSrc = generatePlaceholderSVG(index, post.category);
+                const typeIcon = post.type === 'carousel' ? '⋮' : (post.type === 'video' ? '▶' : '');
+
+                return `
+                    <div class="post-item" onclick="openModal(${index})">
+                        ${hasThumbnail ? `
+                            <img class="post-thumbnail" 
+                                 src="${post.thumbnail}" 
+                                 alt="${post.category}"
+                                 onerror="this.src='${placeholderSrc}'; this.onerror=null;">
+                        ` : `
+                            <img class="post-thumbnail" 
+                                 src="${placeholderSrc}" 
+                                 alt="${post.category}">
+                        `}
+                        <div class="post-overlay">
+                            <div class="overlay-date">${formatDate(post.date)}</div>
+                            <div class="overlay-category">${post.category}</div>
+                        </div>
+                        ${typeIcon ? `<div class="post-type-badge">${typeIcon}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Open modal
+        function openModal(postIndex) {
+            currentPostIndex = postIndex;
+            currentMediaIndex = 0;
+            const post = postsData[postIndex];
+
+            // Update modal info
+            document.getElementById('modalCategory').textContent = post.category;
+            document.getElementById('modalDate').textContent = formatDate(post.date);
+            document.getElementById('modalCaption').textContent = post.caption;
+
+            // Render media carousel
+            renderMediaCarousel(post.media, postIndex);
+            updateModalNavigation();
+
+            // Show modal
+            document.getElementById('postModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('postModal').classList.remove('active');
+            document.body.style.overflow = 'auto';
+        }
+
+        // Render media carousel
+        function renderMediaCarousel(mediaArray, postIndex) {
+            const carousel = document.getElementById('mediaCarousel');
+            const dotsContainer = document.getElementById('carouselDots');
+
+            carousel.innerHTML = mediaArray.map((url, index) => {
+                const hasValidUrl = url && url.trim() !== '';
+                const isVideo = isVideoUrl(url);
+                const activeClass = index === 0 ? 'active' : '';
+                const placeholderSrc = generatePlaceholderSVG(postIndex, postsData[postIndex].category);
+
+                if (isVideo && hasValidUrl) {
+                    return `
+                        <div class="media-item ${activeClass}">
+                            <video class="media-video" controls>
+                                <source src="${url}" type="video/mp4">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="media-item ${activeClass}">
+                            <img class="media-image" 
+                                 src="${hasValidUrl ? url : placeholderSrc}" 
+                                 alt="Post media"
+                                 onerror="this.src='${placeholderSrc}'; this.onerror=null;">
+                        </div>
+                    `;
+                }
+            }).join('');
+
+            // Render dots
+            if (mediaArray.length > 1) {
+                dotsContainer.style.display = 'flex';
+                dotsContainer.innerHTML = mediaArray.map((_, index) => 
+                    `<div class="carousel-dot ${index === 0 ? 'active' : ''}" onclick="goToMedia(${index})"></div>`
+                ).join('');
+            } else {
+                dotsContainer.style.display = 'none';
+            }
+
+            updateMediaButtons();
+        }
+
+        // Navigate media
+        function previousMedia() {
+            if (currentMediaIndex > 0) {
+                currentMediaIndex--;
+                updateMediaDisplay();
+            }
+        }
+
+        function nextMedia() {
+            const post = postsData[currentPostIndex];
+            if (currentMediaIndex < post.media.length - 1) {
+                currentMediaIndex++;
+                updateMediaDisplay();
+            }
+        }
+
+        function goToMedia(index) {
+            currentMediaIndex = index;
+            updateMediaDisplay();
+        }
+
+        // Update media display
+        function updateMediaDisplay() {
+            const mediaItems = document.querySelectorAll('.media-item');
+            const dots = document.querySelectorAll('.carousel-dot');
+
+            mediaItems.forEach((item, index) => {
+                item.classList.toggle('active', index === currentMediaIndex);
+            });
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentMediaIndex);
+            });
+
+            updateMediaButtons();
+        }
+
+        // Update media navigation buttons
+        function updateMediaButtons() {
+            const post = postsData[currentPostIndex];
+            document.getElementById('prevMediaBtn').disabled = currentMediaIndex === 0;
+            document.getElementById('nextMediaBtn').disabled = currentMediaIndex === post.media.length - 1;
+        }
+
+        // Navigate posts
+        function previousPost() {
+            if (currentPostIndex > 0) {
+                openModal(currentPostIndex - 1);
+            }
+        }
+
+        function nextPost() {
+            if (currentPostIndex < postsData.length - 1) {
+                openModal(currentPostIndex + 1);
+            }
+        }
+
+        // Update modal post navigation
+        function updateModalNavigation() {
+            document.getElementById('prevPostBtn').disabled = currentPostIndex === 0;
+            document.getElementById('nextPostBtn').disabled = currentPostIndex === postsData.length - 1;
+        }
+
+        // Initialize data
+        async function initializeData(apiEndpoint) {
+            const rawData = await fetchData(apiEndpoint);
+            
+            if (rawData) {
+                const transformedData = transformData(rawData);
+                postsData = transformedData.posts;
+                profileData = transformedData.profile;
+                
+                renderProfile();
+                renderGrid();
+            }
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('postModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Element SDK implementation
+        async function onConfigChange(config) {
+            const apiEndpoint = config.api_endpoint || defaultConfig.api_endpoint;
+            const username = config.profile_username || defaultConfig.profile_username;
+            const bio = config.profile_bio || defaultConfig.profile_bio;
+
+            // Update profile with config values (fallback if API doesn't provide)
+            profileData = {
+                username: username,
+                bio: bio
+            };
+
+            // Fetch and render data
+            await initializeData(apiEndpoint);
+        }
+
+        function mapToCapabilities(config) {
+            return {
+                recolorables: [],
+                borderables: [],
+                fontEditable: undefined,
+                fontSizeable: undefined
+            };
+        }
+
+        function mapToEditPanelValues(config) {
+            return new Map([
+                ["api_endpoint", config.api_endpoint || defaultConfig.api_endpoint],
+                ["profile_username", config.profile_username || defaultConfig.profile_username],
+                ["profile_bio", config.profile_bio || defaultConfig.profile_bio]
+            ]);
+        }
+
+        // Initialize Element SDK
+        if (window.elementSdk) {
+            window.elementSdk.init({
+                defaultConfig,
+                onConfigChange,
+                mapToCapabilities,
+                mapToEditPanelValues
+            });
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            onConfigChange(defaultConfig);
+        });
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a18b48d244e4935',t:'MTc2MzY0OTY1Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
